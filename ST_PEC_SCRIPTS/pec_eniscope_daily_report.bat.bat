@@ -1,0 +1,1 @@
+python C:\ST_PEC_SCRIPTS\pec_eniscope_daily_report.py -c C:\ST_PEC_SCRIPTS\config\config_pec_eniscope_daily_report.properties
