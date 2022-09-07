@@ -3,6 +3,8 @@ import smtplib
 import sys
 import time as Time
 import requests
+import logging
+import logging.handlers
 from requests.auth import HTTPBasicAuth
 import urllib3
 import logging
@@ -35,7 +37,8 @@ global NOTOK
 NOTOK = 1
 global scriptname
 script = sys.argv[0]
-scriptname = script.split(".")[0]
+scriptname_1 = os.path.basename(script)
+scriptname = scriptname_1.split(".")[0]
 
 def ParseCommandLine():
     """
@@ -77,7 +80,7 @@ def ReadFileToDict(fileName):
         logging.info("Reading keys and values from the file " + fileName + " Successful")
         return keyStore
     except Exception as e:
-        logging.error("open / read the file provided failed with error " + str(e))
+        logging.exception("open / read the file provided failed with error " + str(e))
         raise
 
 def godB():
@@ -94,7 +97,7 @@ def godB():
         return OK
     except Exception as Error_godB:
         logging.info('Error in established initial database connection')
-        logging.error("dB connection with error " + str(Error_godB))
+        logging.exception("dB connection with error " + str(Error_godB))
         sys.exit(NOTOK)
 
 def loaddB(sqlupsert):
@@ -104,7 +107,7 @@ def loaddB(sqlupsert):
         return count
     except Exception as Error_loaddB:
         logging.info('Error in loading data')
-        logging.error("UPSERT failed with error " + str(Error_loaddB))
+        logging.exception("UPSERT failed with error " + str(Error_loaddB))
         sys.exit(NOTOK)
 
 def call_stored_procedure():
@@ -122,21 +125,21 @@ def call_stored_procedure():
         if error_message:
             print ("error_message : "+error_message)
             raise Error_dbCall
-        
+
         return OK
-        
+
     except Exception as Error_dbCall:
         logging.info('Error in executing store procedure :'+stored_proc)
-        logging.error("Store proc execution failed " + str(Error_dbCall))
-        logging.error(error_message)
+        logging.exception("Store proc execution failed " + str(Error_dbCall))
+        logging.exception(error_message)
         sys.exit(NOTOK)
     except Exception as Error_loading:
         logging.info('Error in loading the payload')
-        logging.error("Store proc execution failed "+ str(Error_loading))
+        logging.exception("Store proc execution failed "+ str(Error_loading))
         sys.exit(NOTOK)
 
 def create_graphs():
-    
+
     logging.info("Creating Graphs Started")
     # Create Graph 1 - Cosumption for Whole Day
     sql_data1 = pd.read_sql_query('''
@@ -171,11 +174,11 @@ def create_graphs():
     logging.info("Plot 1 executed checking for errors")
 
     if not os.path.exists(plot1_name):
-        logging.error("Plot 1 executed but some error please check for: "+plot1_name)
+        logging.exception("Plot 1 executed but some error please check for: "+plot1_name)
         sys.exit(NOTOK)
     else:
         logging.info("Plot 1 executed and graph file created : "+plot1_name)
-       
+
     #Create Graph 2 - Consumption for Whole Day at Unit level
     sql_data2 = pd.read_sql_query('''
                                      SELECT eniscope_meter_name,
@@ -209,7 +212,7 @@ def create_graphs():
     logging.info("Plot 2 executed checking for errors")
 
     if not os.path.exists(plot2_name):
-        logging.error("Plot 2 executed but some error please check for: "+plot2_name)
+        logging.exception("Plot 2 executed but some error please check for: "+plot2_name)
         sys.exit(NOTOK)
     else:
         logging.info("Plot 2 executed and graph file created : "+plot2_name)
@@ -220,7 +223,7 @@ def create_html_body():
     html_template = '''\
                     <html>
 <head>
-     
+
    <title>Tutsplus Email Newsletter</title>
    <style type="text/css">
     a {color: #d80a3e;}
@@ -234,7 +237,7 @@ def create_html_body():
     h5 {font-size: 18px; color: #444444 !important; font-family: Arial, Helvetica, sans-serif; }
   p {font-size: 12px; color: #444444 !important; font-family: "Lucida Grande", "Lucida Sans", "Lucida Sans Unicode", sans-serif; line-height: 1.5;}
    </style>
-  
+
   <style>
 	.demo {
 	    width:90%;
@@ -255,7 +258,7 @@ def create_html_body():
 		padding:5px;
 		font-size: 10px;
 	}
-	
+
 	<style>
 	.summary {
 	    width:90%;
@@ -278,17 +281,17 @@ def create_html_body():
 		font-size: 10px
 		background:#ECEA98;
 	}
-	
-	
+
+
 </style>
-   
+
 </head>
 <body>
 <table width="100%" cellpadding="0" cellspacing="0" bgcolor="e4e4e4"><tr><td>
 <table id="top-message" cellpadding="20" cellspacing="0" width="600" align="center">
 
   </table>
-  
+
 <table id="main" width="600" align="center" cellpadding="0" cellspacing="15" bgcolor="ffffff">
     <tr>
       <td>
@@ -302,11 +305,11 @@ def create_html_body():
         </table>
       </td>
     </tr>
-	
+
 	<tr>
       <td>
         <table id="content-1" class = "summary" cellpadding="0" cellspacing="0" align="center">
-		
+
 		  <thead>
 	<tr>
 		<th>Energy Used</th>
@@ -319,18 +322,18 @@ def create_html_body():
 		@@@@@@@@@@2
 	</tr>
 	</tbody>
-          
+
         </table>
       </td>
     </tr>
-	
-	
+
+
     <tr>
       <td>
-	  
+
 		<div style="text-align: center;"> <span style="font-size: 15px; width:90%;"><h5>Usage breakdown</h5></span></div>
 		<table id="content-4" class="demo" align="center">
-	
+
 	<thead>
 	<tr>
 		<th>Eniscope Name</th>
@@ -348,14 +351,14 @@ def create_html_body():
 
 
 <div style="text-align: left;"> <span style="font-size: 10px; width:3; padding:5px">
-*Note : Please see attachments for the graphical analysis of the energy consumption</span></div>	
+*Note : Please see attachments for the graphical analysis of the energy consumption</span></div>
 </table>
 
   </table>
-  
- 
-  
-  
+
+
+
+
 </body>
 </html>\
 '''
@@ -394,7 +397,7 @@ SELECT *
             html_template = html_template.replace('@@@@@@@@@@3', html_string)
         else:
             html_string += df.token[x]
-        
+
     global html_body
     html_body = html_template
 
@@ -462,40 +465,44 @@ def shoot_email():
 
     logging.info("send email completed")
 
-    
+
 
 def main():
 
     ParseCommandLine()
-    
+
     global Creds
     Creds = ReadFileToDict(gl_args.credFile)
-    
+
 
     # turn on logging
     global tfortime
     tfortime = Time.strftime('%Y%m%d%H%M%S', Time.localtime())
     #logfile
-    logfile = "C:\\log\\"
+    logfile = "C:\\ST_PEC_SCRIPTS\\log\\"
     logfile += str(scriptname)
     logfile += "_"
     logfile += str(tfortime)
     logfile += ".log"
-    
-    rawlogfile = r'%s' %logfile
-    
-    logging.basicConfig(filename=rawlogfile,
-                    #level=logging.DEBUG,
-                    format='%(asctime)s | %(levelname)s | %(message)s',
-                    filemode='w')
-    
+
+    #rawlogfile = r'%s' %logfile
+
+    # turn on logging
+    handler = logging.handlers.WatchedFileHandler(
+    os.environ.get("LOGFILE", logfile))
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+    handler.setFormatter(formatter)
+    root = logging.getLogger()
+    root.setLevel(os.environ.get("LOGLEVEL", "DEBUG"))
+    root.addHandler(handler)
+
     #Declaring Array for maintaining payload
     global mqtt_payload
     mqtt_payload = []
     elements = len(mqtt_payload)
 
 
-    logging.info('Get Credentials')
+    logging.warning('Get Credentials')
     logging.info('Credentials file is ' + gl_args.credFile)
 
     #Check Database Connectivity
@@ -507,10 +514,8 @@ def main():
     #Send Email
     shoot_email()
 
-    
+
 
 if __name__ == "__main__":
 
     main()
-
-

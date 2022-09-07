@@ -1,14 +1,14 @@
 USE [stidata]
 GO
-/****** Object:  StoredProcedure [dbo].[st_pec_eniscope_daily_report_proc]    Script Date: 25/8/2022 4:12:50 pm ******/
+/****** Object:  StoredProcedure [dbo].[st_pec_eniscope_daily_report_proc]    Script Date: 29/8/2022 9:57:46 am ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[st_pec_eniscope_daily_report_proc] 
+CREATE PROCEDURE [dbo].[st_pec_eniscope_daily_report_proc]
 	@Error_message nvarchar(MAX)  OUTPUT
-AS  
+AS
 
 DECLARE
     @Err_Message nvarchar(MAX),
@@ -53,7 +53,7 @@ DECLARE
          		 Source.increment_type,
          		 Source.update_timestamp,
          		 Source.update_id)
-            WHEN MATCHED THEN 
+            WHEN MATCHED THEN
            UPDATE SET
                   Target.energy	                        = Source.energy,
                   Target.energy_in_units		            = Source.energy_in_units,
@@ -74,7 +74,7 @@ DECLARE
 
 		 PRINT ('ROWS Deleted FROM ST_PEC_ENISCOPE_DAILY_REPORT :'+CAST(@@ROWCOUNT AS nvarchar(30)));
 
-		 
+
         WITH eniscope_1 AS (SELECT DISTINCT device_uid,
                                    device_meter_id,
         						   local_date,
@@ -192,20 +192,16 @@ DECLARE
         							 total_system_energy
         						FROM eniscope_9 e9
         	                 ),
-             total_energy AS (SELECT al.local_date AS report_date, 
+             total_energy AS (SELECT al.local_date AS report_date,
         	                         conf.seq_no,
         							 conf.eniscope_seq_no,
         							 conf.eniscope_meter_point,
         	                         conf.eniscope_meter_name,
         	                         al.total_system_energy AS energy,
-        							 CASE WHEN LEN(CAST(ROUND(al.total_system_energy,1) AS BIGINT)) > 6 THEN
-        							     CONCAT(al.total_system_energy/1000000, ' MWh')
-        							 ELSE
-        								 CONCAT(al.total_system_energy/1000, ' KWh')
-        							 END AS energy_in_units,
+        							 CONCAT(STR(al.total_system_energy/1000000), ' KWh') AS energy_in_units,
         							 (al.total_system_energy * op.power_cost) AS energy_cost
         	                    FROM st_pec_system_options op,
-        						     st_pec_eniscope_config conf 
+        						     st_pec_eniscope_config conf
         							 LEFT OUTER JOIN
         						     all_eniscope al
         						  ON     conf.eniscope_uid          = al.device_uid
@@ -228,11 +224,7 @@ DECLARE
         							 te.energy_in_units,
         							 te.energy_cost,
         							 ISNULL(awr.avg_system_energy,1) AS avg_energy_last_week,
-        							 CASE WHEN LEN(CAST(ROUND(ISNULL(awr.avg_system_energy,1),1) AS BIGINT)) > 6 THEN
-        							     CONCAT(ISNULL(awr.avg_system_energy,1)/1000000, ' MWh')
-        							 ELSE
-        								 CONCAT(ISNULL(awr.avg_system_energy,1)/1000, ' KWh')
-        							 END AS avg_energy_last_week_in_units
+        							 CONCAT(STR(ISNULL(awr.avg_system_energy,1)/1000000), ' KWh') AS avg_energy_last_week_in_units
         	                    FROM total_energy te
         						     LEFT OUTER JOIN
         						     avg_week_report awr
@@ -299,7 +291,7 @@ DECLARE
 			   increment_type
           FROM daily_report_final;
 
-      PRINT ('ROWS Insert INTO ST_PEC_ENISCOPE_DAILY_REPORT :'+CAST(@@ROWCOUNT AS nvarchar(30)));	      
+      PRINT ('ROWS Insert INTO ST_PEC_ENISCOPE_DAILY_REPORT :'+CAST(@@ROWCOUNT AS nvarchar(30)));
 
 	  WITH daily_report_summ AS (SELECT DISTINCT report_date,
                                   999 AS seq_no,
@@ -316,18 +308,10 @@ DECLARE
 										eniscope_meter_point,
 										eniscope_meter_name,
 										energy,
-										CASE WHEN LEN(CAST(ROUND(ISNULL(energy,1),1) AS BIGINT)) > 6 THEN
-        							        CONCAT(ISNULL(energy,1)/1000000, ' MWh')
-        							    ELSE
-        								    CONCAT(ISNULL(energy,1)/1000, ' KWh')
-        							    END AS energy_in_units,
+										CONCAT(STR(ISNULL(energy,1)/1000000), ' KWh') AS energy_in_units,
 										energy_cost,
 										avg_energy_last_week,
-										CASE WHEN LEN(CAST(ROUND(ISNULL(avg_energy_last_week,1),1) AS BIGINT)) > 6 THEN
-        							        CONCAT(ISNULL(avg_energy_last_week,1)/1000000, ' MWh')
-        							    ELSE
-        								    CONCAT(ISNULL(avg_energy_last_week,1)/1000, ' KWh')
-        							    END AS avg_energy_last_week_in_units,
+										CONCAT(STR(ISNULL(avg_energy_last_week,1)/1000000), ' KWh') AS avg_energy_last_week_in_units,
 										ROUND( (energy - avg_energy_last_week) * 100 / (avg_energy_last_week), 2)  AS percentage_change,
         								CASE WHEN ((energy - avg_energy_last_week) * 100 / (avg_energy_last_week)) < 0 THEN
         								    'DOWN'
@@ -375,4 +359,3 @@ DECLARE
 		  RAISERROR (@Err_Message, @Err_Severity, @Err_State)
 
        END CATCH
- 

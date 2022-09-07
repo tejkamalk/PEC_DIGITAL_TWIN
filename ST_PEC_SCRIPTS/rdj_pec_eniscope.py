@@ -3,6 +3,8 @@ import smtplib
 import sys
 import time as Time
 import requests
+import logging
+import logging.handlers
 from requests.auth import HTTPBasicAuth
 import urllib3
 import logging
@@ -23,7 +25,8 @@ global NOTOK
 NOTOK = 1
 global scriptname
 script = sys.argv[0]
-scriptname = script.split(".")[0]
+scriptname_1 = os.path.basename(script)
+scriptname = scriptname_1.split(".")[0]
 
 def ParseCommandLine():
     """
@@ -66,7 +69,7 @@ def ReadFileToDict(fileName):
         logging.info("Reading keys and values from the file " + fileName + " Successful")
         return keyStore
     except Exception as e:
-        logging.error("open / read the file provided failed with error " + str(e))
+        logging.exception("open / read the file provided failed with error " + str(e))
         raise
 
 def godB():
@@ -78,7 +81,7 @@ def godB():
         return OK
     except Exception as Error_godB:
         logging.info('Error in established initial database connection')
-        logging.error("dB connection with error " + str(Error_godB))
+        logging.exception("dB connection with error " + str(Error_godB))
         sys.exit(NOTOK)
 
 def loaddB(sqlupsert):
@@ -88,7 +91,7 @@ def loaddB(sqlupsert):
         return count
     except Exception as Error_loaddB:
         logging.info('Error in loading data')
-        logging.error("UPSERT failed with error " + str(Error_loaddB))
+        logging.exception("UPSERT failed with error " + str(Error_loaddB))
         sys.exit(NOTOK)
 
 def call_stored_procedure(json):
@@ -129,12 +132,12 @@ def call_stored_procedure(json):
 
     except Exception as Error_dbCall:
         logging.info('Error in executing store procedure :'+stored_proc)
-        logging.error("Store proc execution failed " + str(Error_dbCall))
-        logging.error(error_message)
+        logging.exception("Store proc execution failed " + str(Error_dbCall))
+        logging.exception(error_message)
         sys.exit(NOTOK)
     except Exception as Error_loading:
         logging.info('Error in loading the payload')
-        logging.error("Store proc execution failed "+ str(Error_loading))
+        logging.exception("Store proc execution failed "+ str(Error_loading))
         sys.exit(NOTOK)
 
 
@@ -170,15 +173,15 @@ def on_message(mqttc, obj, msg):
     Time.sleep(0.1)
 
 def on_publish(mqttc, obj, mid):
-    logging.info("Publish Function")
+    #logging.info("Publish Function")
 
 
 def on_subscribe(mqttc, obj, mid, granted_qos):
-    logging.info("Subscribe Function")
+    #logging.info("Subscribe Function")
 
 
 def on_log(mqttc, obj, level, string):
-    logging.info("On Log Function")
+    #logging.info("On Log Function")
 
 
 def main():
@@ -198,7 +201,7 @@ def main():
     # turn on logging
     tfortime = Time.strftime('%Y%m%d%H%M%S', Time.localtime())
     #logfile
-    logfile = "C:\\log\\"
+    logfile = "C:\\ST_PEC_SCRIPTS\\log\\"
     logfile += str(scriptname)
     logfile += "_"
     logfile += str(eniscope_id)
@@ -206,12 +209,16 @@ def main():
     logfile += str(tfortime)
     logfile += ".log"
 
-    rawlogfile = r'%s' %logfile
+    #rawlogfile = r'%s' %logfile
 
-    logging.basicConfig(filename=rawlogfile,
-                    level=logging.DEBUG,
-                    format='%(asctime)s | %(levelname)s | %(message)s',
-                    filemode='w')
+    # turn on logging
+    handler = logging.handlers.WatchedFileHandler(
+    os.environ.get("LOGFILE", logfile))
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+    handler.setFormatter(formatter)
+    root = logging.getLogger()
+    root.setLevel(os.environ.get("LOGLEVEL", "DEBUG"))
+    root.addHandler(handler)
 
     #Declaring Array for maintaining payload
     global mqtt_payload
